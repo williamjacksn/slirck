@@ -64,8 +64,8 @@ def on_join(message, bot):
     source = tokens[0].lstrip(':')
     nick, user, host = bot.parse_hostmask(source)
     channel = tokens[2].lstrip(':')
-    send_to_slack('*{}* [{}@{}] has joined *{}*'.format(nick, user, host, channel),
-                  bot.c['irc:host'], bot)
+    m = '*{}* joined *{}* [{}@{}]'.format(nick, channel, user, host)
+    send_to_slack(m, bot.c['irc:host'], bot)
 
 
 def on_quit(message, bot):
@@ -73,8 +73,16 @@ def on_quit(message, bot):
     source = tokens[0].lstrip(':')
     nick, user, host = bot.parse_hostmask(source)
     text = message.split(' :', maxsplit=1)[1]
-    send_to_slack('*{}* [{}@{}] has quit [{}]'.format(nick, user, host, text),
-                  bot.c['irc:host'], bot)
+    send_to_slack('*{}* quit [{}]'.format(nick, text), bot.c['irc:host'], bot)
+
+
+def on_nick(message, bot):
+    tokens = message.split()
+    source = tokens[0].lstrip(':')
+    old_nick, _, _ = bot.parse_hostmask(source)
+    new_nick = tokens[2].lstrip(':')
+    m = '*{}* is now known as *{}*'.format(old_nick, new_nick)
+    send_to_slack(m, bot.c['irc:host'], bot)
 
 
 def on_privmsg(message, bot):
@@ -104,10 +112,11 @@ def main():
     irc.debug = True
 
     irc.ee.on('376', func=on_rpl_endofmotd)
-    irc.ee.on('JOIN', func=on_join)
-    irc.ee.on('QUIT', func=on_quit)
-    irc.ee.on('PRIVMSG', func=on_privmsg)
     irc.ee.on('ACTION', func=on_action)
+    irc.ee.on('JOIN', func=on_join)
+    irc.ee.on('NICK', func=on_nick)
+    irc.ee.on('PRIVMSG', func=on_privmsg)
+    irc.ee.on('QUIT', func=on_quit)
 
     def receive_from_slack(request):
         data = yield from request.content.read()
