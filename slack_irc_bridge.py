@@ -55,8 +55,14 @@ def get_rw_avatar_url(nick, bot):
     return avatar
 
 
-def on_rpl_endofmotd(_, bot):
-    bot.out('JOIN {}'.format(bot.c.get('irc:channel')))
+def on_action(message, bot):
+    tokens = message.split()
+    target = tokens[2]
+    if bot.is_irc_channel(target):
+        source = tokens[0].lstrip(':')
+        nick, _, _ = bot.parse_hostmask(source)
+        text = ' '.join(tokens[4:])
+        send_to_slack('_{}_'.format(text), nick, bot)
 
 
 def on_join(message, bot):
@@ -66,14 +72,6 @@ def on_join(message, bot):
     channel = tokens[2].lstrip(':')
     m = '*{}* joined *{}* [{}@{}]'.format(nick, channel, user, host)
     send_to_slack(m, bot.c['irc:host'], bot)
-
-
-def on_quit(message, bot):
-    tokens = message.split()
-    source = tokens[0].lstrip(':')
-    nick, user, host = bot.parse_hostmask(source)
-    text = message.split(' :', maxsplit=1)[1]
-    send_to_slack('*{}* quit [{}]'.format(nick, text), bot.c['irc:host'], bot)
 
 
 def on_nick(message, bot):
@@ -95,14 +93,25 @@ def on_privmsg(message, bot):
         send_to_slack(text, source_nick, bot)
 
 
-def on_action(message, bot):
+def on_quit(message, bot):
     tokens = message.split()
-    target = tokens[2]
-    if bot.is_irc_channel(target):
-        source = tokens[0].lstrip(':')
-        nick, _, _ = bot.parse_hostmask(source)
-        text = ' '.join(tokens[4:])
-        send_to_slack('_{}_'.format(text), nick, bot)
+    source = tokens[0].lstrip(':')
+    nick, user, host = bot.parse_hostmask(source)
+    text = message.split(' :', maxsplit=1)[1]
+    send_to_slack('*{}* quit [{}]'.format(nick, text), bot.c['irc:host'], bot)
+
+
+def on_rpl_endofmotd(_, bot):
+    bot.out('JOIN {}'.format(bot.c.get('irc:channel')))
+
+
+def on_topic(message, bot):
+    tokens = message.split()
+    source = tokens[0].lstrip(':')
+    nick, _, _ = bot.parse_hostmask(source)
+    topic = message.split(' :', maxsplit=1)[1]
+    m = '*{}* changed the topic:\n{}'.format(nick, topic)
+    send_to_slack(m, bot.c['irc:host'], bot)
 
 
 def main():
@@ -117,6 +126,7 @@ def main():
     irc.ee.on('NICK', func=on_nick)
     irc.ee.on('PRIVMSG', func=on_privmsg)
     irc.ee.on('QUIT', func=on_quit)
+    irc.ee.on('TOPIC', func=on_topic)
 
     def receive_from_slack(request):
         data = yield from request.content.read()
