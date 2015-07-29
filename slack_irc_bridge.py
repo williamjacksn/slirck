@@ -102,6 +102,8 @@ def on_quit(message, bot):
 
 
 def on_rpl_endofmotd(_, bot):
+    if 'irc:nickservpass' in bot.c:
+        bot.send_privmsg('nickserv', 'identify ' + bot.c['irc:nickservpass'])
     bot.out('JOIN {}'.format(bot.c.get('irc:channel')))
 
 
@@ -134,9 +136,16 @@ def main():
         if 'USLACKBOT' in data['user_id']:
             return aiohttp.web.Response()
 
+        irc.log('## Passing message from Slack to IRC')
         speaker = data['user_name'][0]
         text = data['text'][0]
-        irc.log('## Passing message from Slack to IRC')
+        if 'slack:username' in irc.c:
+            if irc.c['slack:username'] == speaker:
+                irc.send_privmsg(irc.c['irc:channel'], text)
+            else:
+                irc.log('## Message username did not match config')
+                return aiohttp.web.Response()
+
         irc.send_privmsg(irc.c['irc:channel'], '<{}> {}'.format(speaker, text))
         return aiohttp.web.Response()
 
