@@ -94,6 +94,13 @@ def on_nick(message, bot):
     send_to_slack(m, bot.c['irc:host'], bot)
 
 
+def on_notice(message, bot):
+    tokens = message.split(maxsplit=3)
+    source = tokens[0].lstrip(':')
+    nick, _, _ = bot.parse_hostmask(source)
+    send_to_slack_dm(tokens[3], nick, bot)
+
+
 def on_privmsg(message, bot):
     tokens = message.split()
     target = tokens[2]
@@ -139,6 +146,7 @@ def main():
     irc.ee.on('ACTION', func=on_action)
     irc.ee.on('JOIN', func=on_join)
     irc.ee.on('NICK', func=on_nick)
+    irc.ee.on('NOTICE', func=on_notice)
     irc.ee.on('PRIVMSG', func=on_privmsg)
     irc.ee.on('QUIT', func=on_quit)
     irc.ee.on('TOPIC', func=on_topic)
