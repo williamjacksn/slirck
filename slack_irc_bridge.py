@@ -144,7 +144,7 @@ def main():
                 irc.send_privmsg(irc.c['irc:channel'], text)
             else:
                 irc.log('## Message username did not match config')
-                return aiohttp.web.Response()
+            return aiohttp.web.Response()
 
         irc.send_privmsg(irc.c['irc:channel'], '<{}> {}'.format(speaker, text))
         return aiohttp.web.Response()
