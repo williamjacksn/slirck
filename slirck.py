@@ -159,17 +159,17 @@ def main():
         if 'USLACKBOT' in data['user_id']:
             return rv
 
-        if 'command' in data and '/pm' in data['command']:
-            irc.log('** Processing /pm from Slack to IRC')
-            target, message = data['text'][0].split(maxsplit=1)
-            irc.send_privmsg(target.lstrip('@'), message)
-            return rv
-
-        if 'command' in data and '/raw' in data['command']:
-            irc.log('** Processing /raw from Slack to IRC')
-            text = data['text'][0]
-            irc.out(text)
-            return rv
+        if 'command' in data:
+            if '/pm' in data['command']:
+                irc.log('** Processing /pm from Slack to IRC')
+                target, message = data['text'][0].split(maxsplit=1)
+                irc.send_privmsg(target.lstrip('@'), message)
+                return rv
+            elif '/raw' in data['command']:
+                irc.log('** Processing /raw from Slack to IRC')
+                text = data['text'][0]
+                irc.out(text)
+                return rv
 
         irc.log('** Processing message from Slack to IRC')
         speaker = data['user_name'][0]
