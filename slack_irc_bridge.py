@@ -98,7 +98,8 @@ def on_notice(message, bot):
     tokens = message.split(maxsplit=3)
     source = tokens[0].lstrip(':')
     nick, _, _ = bot.parse_hostmask(source)
-    send_to_slack_dm(tokens[3], nick, bot)
+    text = tokens[3].lstrip(':')
+    send_to_slack_dm(text, nick, bot)
 
 
 def on_privmsg(message, bot):
