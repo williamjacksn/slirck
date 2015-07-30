@@ -144,17 +144,25 @@ def main():
     irc.ee.on('TOPIC', func=on_topic)
 
     def receive_from_slack(request):
-        irc.log('## Processing message from Slack to IRC')
+        rv = aiohttp.web.Response()
         data = yield from request.content.read()
         data = urllib.parse.parse_qs(data.decode())
         if 'USLACKBOT' in data['user_id']:
-            return aiohttp.web.Response()
+            return rv
 
-        if 'command' in data and '/irc' in data['command']:
+        if 'command' in data and '/pm' in data['command']:
+            irc.log('** Processing /pm from Slack to IRC')
             target, message = data['text'][0].split(maxsplit=1)
             irc.send_privmsg(target.lstrip('@'), message)
-            return aiohttp.web.Response()
+            return rv
 
+        if 'command' in data and '/raw' in data['command']:
+            irc.log('** Processing /raw from Slack to IRC')
+            text = data['text'][0]
+            irc.out(text)
+            return rv
+
+        irc.log('** Processing message from Slack to IRC')
         speaker = data['user_name'][0]
         text = data['text'][0]
         if 'slack:username' in irc.c:
@@ -162,10 +170,10 @@ def main():
                 irc.send_privmsg(irc.c['irc:channel'], text)
             else:
                 irc.log('## Message username did not match config')
-            return aiohttp.web.Response()
+            return rv
 
         irc.send_privmsg(irc.c['irc:channel'], '<{}> {}'.format(speaker, text))
-        return aiohttp.web.Response()
+        return rv
 
     app = aiohttp.web.Application()
     app.router.add_route('POST', '/', receive_from_slack)
