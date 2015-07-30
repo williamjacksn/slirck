@@ -149,6 +149,10 @@ def main():
         if 'USLACKBOT' in data['user_id']:
             return aiohttp.web.Response()
 
+        if 'command' in data and '/irc' in data['command']:
+            irc.log(data['text'][0])
+            return aiohttp.web.Response()
+
         irc.log('## Passing message from Slack to IRC')
         speaker = data['user_name'][0]
         text = data['text'][0]
