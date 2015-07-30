@@ -18,6 +18,17 @@ def send_to_slack(text, username, bot):
     urllib.request.urlopen(url, data=data)
 
 
+def send_to_slack_dm(text, username, bot):
+    url = bot.c['slack:url']
+    params = {'text': text, 'username': '<{}>'.format(username),
+              'channel': '@' + bot.c['slack:username']}
+    avatar = get_rw_avatar_url(username, bot)
+    if avatar is not None:
+        params['icon_url'] = avatar
+    data = json.dumps(params).encode()
+    urllib.request.urlopen(url, data=data)
+
+
 def rw_api_call(path, params=None):
     url = 'http://rainwave.cc/api4/' + path
     if params is None:
@@ -91,6 +102,8 @@ def on_privmsg(message, bot):
     text = message.split(' :', maxsplit=1)[1]
     if bot.is_irc_channel(target):
         send_to_slack(text, source_nick, bot)
+    else:
+        send_to_slack_dm(text, source_nick, bot)
 
 
 def on_quit(message, bot):
