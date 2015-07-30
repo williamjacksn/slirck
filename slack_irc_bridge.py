@@ -144,16 +144,17 @@ def main():
     irc.ee.on('TOPIC', func=on_topic)
 
     def receive_from_slack(request):
+        irc.log('## Processing message from Slack to IRC')
         data = yield from request.content.read()
         data = urllib.parse.parse_qs(data.decode())
         if 'USLACKBOT' in data['user_id']:
             return aiohttp.web.Response()
 
         if 'command' in data and '/irc' in data['command']:
-            irc.log(data['text'][0])
+            target, message = data['text'][0].split(maxsplit=1)
+            irc.send_privmsg(target.lstrip('@'), message)
             return aiohttp.web.Response()
 
-        irc.log('## Passing message from Slack to IRC')
         speaker = data['user_name'][0]
         text = data['text'][0]
         if 'slack:username' in irc.c:
