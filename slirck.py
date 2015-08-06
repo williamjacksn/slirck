@@ -157,6 +157,15 @@ def on_rpl_endofmotd(_, bot):
         bot.out('JOIN ' + channel)
 
 
+def on_rpl_topic(message, bot):
+    token = bot.c['slack:token']
+    tokens = message.split(maxsplit=4)
+    irc_channel = tokens[3]
+    topic = tokens[4].lstrip(':')
+    slack_channel = bot.c['channel_map'][irc_channel]
+    Slack.set_topic(token, slack_channel, topic)
+
+
 def on_topic(message, bot):
     token = bot.c['slack:token']
     tokens = message.split()
@@ -177,6 +186,7 @@ def main():
     irc.c.pretty = True
     irc.debug = True
 
+    irc.ee.on('332', func=on_rpl_topic)
     irc.ee.on('376', func=on_rpl_endofmotd)
     irc.ee.on('ACTION', func=on_action)
     irc.ee.on('JOIN', func=on_join)
