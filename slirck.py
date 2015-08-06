@@ -28,23 +28,11 @@ class Slack:
             params['icon_url'] = icon_url
         return Slack.call(method, params)
 
-
-def send_to_slack(text, username, bot):
-    token = bot.c['slack:token']
-    channel = list(bot.c['channel_map'].keys())[0]
-    icon_url = get_rw_avatar_url(username, bot)
-    Slack.post_message(token, channel, text, '<{}>'.format(username), icon_url)
-
-
-def send_to_slack_dm(text, username, bot):
-    url = bot.c['slack:url']
-    params = {'text': text, 'username': '<{}>'.format(username),
-              'channel': '@' + bot.c['slack:username']}
-    avatar = get_rw_avatar_url(username, bot)
-    if avatar is not None:
-        params['icon_url'] = avatar
-    data = json.dumps(params).encode()
-    urllib.request.urlopen(url, data=data)
+    @staticmethod
+    def set_topic(token, channel, topic):
+        method = 'channels.setTopic'
+        params = {'token': token, 'channel': channel, 'topic': topic}
+        return Slack.call(method, params)
 
 
 def rw_api_call(path, params=None):
@@ -85,13 +73,15 @@ def get_rw_avatar_url(nick, bot):
 
 
 def on_action(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     target = tokens[2]
     if bot.is_irc_channel(target):
         source = tokens[0].lstrip(':')
         nick, _, _ = bot.parse_hostmask(source)
+        icon_url = get_rw_avatar_url(nick, bot)
         text = ' '.join(tokens[4:])
-        send_to_slack('_{}_'.format(text), nick, bot)
+        Slack.post_message(token, target, text, nick, icon_url)
 
 
 def on_join(message, bot):
@@ -107,20 +97,30 @@ def on_join(message, bot):
 
 
 def on_nick(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     source = tokens[0].lstrip(':')
     old_nick, _, _ = bot.parse_hostmask(source)
+    icon_url = get_rw_avatar_url(old_nick, bot)
     new_nick = tokens[2].lstrip(':')
-    m = '*{}* is now known as *{}*'.format(old_nick, new_nick)
-    send_to_slack(m, bot.c['irc:host'], bot)
+    if icon_url is None:
+        icon_url = get_rw_avatar_url(new_nick, bot)
+    irc_channels = [channel for channel, members in bot.members.items()
+                    if old_nick in members]
+    text = '_is now known as *{}*_'.format(old_nick, new_nick)
+    for irc_channel in irc_channels:
+        Slack.post_message(token, irc_channel, text, old_nick, icon_url)
 
 
 def on_notice(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split(maxsplit=3)
     source = tokens[0].lstrip(':')
     nick, _, _ = bot.parse_hostmask(source)
+    icon_url = get_rw_avatar_url(nick, bot)
     text = tokens[3].lstrip(':')
-    send_to_slack_dm(text, nick, bot)
+    target = '@' + bot.c['slack:username']
+    Slack.post_message(token, target, text, nick, icon_url)
 
 
 def on_privmsg(message, bot):
@@ -135,7 +135,6 @@ def on_privmsg(message, bot):
         slack_channel = bot.c['channel_map'][target]
         Slack.post_message(token, slack_channel, text, nick, icon_url)
     else:
-        send_to_slack_dm(text, nick, bot)
         username = '@' + bot.c['slack:username']
         Slack.post_message(token, username, text, nick, icon_url)
 
@@ -147,7 +146,7 @@ def on_quit(message, bot):
     nick, _, _ = bot.parse_hostmask(source)
     icon_url = get_rw_avatar_url(nick, bot)
     text = message.split(' :', maxsplit=1)[1]
-    m = '_quit [{}]_'.format(nick, text)
+    m = '_quit_ [{}]'.format(nick, text)
     Slack.post_message(token, bot.c['irc:channel'], m, nick, icon_url)
 
 
@@ -159,12 +158,17 @@ def on_rpl_endofmotd(_, bot):
 
 
 def on_topic(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     source = tokens[0].lstrip(':')
     nick, _, _ = bot.parse_hostmask(source)
+    icon_url = get_rw_avatar_url(nick, bot)
+    target = tokens[2]
+    slack_channel = bot.c['channel_map'][target]
     topic = message.split(' :', maxsplit=1)[1]
-    m = '*{}* changed the topic:\n{}'.format(nick, topic)
-    send_to_slack(m, bot.c['irc:host'], bot)
+    text = '*{}* changed the topic:\n{}'.format(nick, topic)
+    Slack.post_message(token, slack_channel, text, nick, icon_url)
+    Slack.set_topic(token, slack_channel, topic)
 
 
 def main():
