@@ -102,9 +102,8 @@ def on_join(message, bot):
     irc_channel = tokens[2].lstrip(':')
     slack_channel = bot.c['channel_map'][irc_channel]
     text = '_joined {}_ [{}@{}]'.format(irc_channel, user, host)
-    username = '<{}>'.format(nick)
     icon_url = get_rw_avatar_url(nick, bot)
-    Slack.post_message(token, slack_channel, text, username, icon_url)
+    Slack.post_message(token, slack_channel, text, nick, icon_url)
 
 
 def on_nick(message, bot):
@@ -125,24 +124,31 @@ def on_notice(message, bot):
 
 
 def on_privmsg(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     target = tokens[2]
     source = tokens[0].lstrip(':')
-    source_nick, _, _ = bot.parse_hostmask(source)
+    nick, _, _ = bot.parse_hostmask(source)
+    icon_url = get_rw_avatar_url(nick, bot)
     text = message.split(' :', maxsplit=1)[1]
     if bot.is_irc_channel(target):
-        send_to_slack(text, source_nick, bot)
+        slack_channel = bot.c['channel_map'][target]
+        Slack.post_message(token, slack_channel, text, nick, icon_url)
     else:
-        send_to_slack_dm(text, source_nick, bot)
+        send_to_slack_dm(text, nick, bot)
+        username = '@' + bot.c['slack:username']
+        Slack.post_message(token, username, text, nick, icon_url)
 
 
 def on_quit(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     source = tokens[0].lstrip(':')
-    nick, user, host = bot.parse_hostmask(source)
+    nick, _, _ = bot.parse_hostmask(source)
+    icon_url = get_rw_avatar_url(nick, bot)
     text = message.split(' :', maxsplit=1)[1]
-    m = '*{}* quit [{}]'.format(nick, text)
-    send_to_slack(m, bot.c['irc:host'], bot)
+    m = '_quit [{}]_'.format(nick, text)
+    Slack.post_message(token, bot.c['irc:channel'], m, nick, icon_url)
 
 
 def on_rpl_endofmotd(_, bot):
