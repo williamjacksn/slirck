@@ -8,14 +8,32 @@ import urllib.parse
 import urllib.request
 
 
+class Slack:
+
+    @staticmethod
+    def call(method, params=None):
+        url = 'https://slack.com/api/' + method
+        if params is None:
+            params = {}
+        data = urllib.parse.urlencode(params).encode()
+        response = urllib.request.urlopen(url, data)
+        return json.loads(response.read().decode())
+
+    @staticmethod
+    def post_message(token, channel, text, username, icon_url=None):
+        method = 'chat.postMessage'
+        params = {'token': token, 'channel': channel, 'text': text,
+                  'username': username}
+        if icon_url is not None:
+            params['icon_url'] = icon_url
+        return Slack.call(method, params)
+
+
 def send_to_slack(text, username, bot):
-    url = bot.c.get('slack:url')
-    params = {'text': text, 'username': '<{}>'.format(username)}
-    avatar = get_rw_avatar_url(username, bot)
-    if avatar is not None:
-        params['icon_url'] = avatar
-    data = json.dumps(params).encode()
-    urllib.request.urlopen(url, data=data)
+    token = bot.c['slack:token']
+    channel = list(bot.c['channel_map'].keys())[0]
+    icon_url = get_rw_avatar_url(username, bot)
+    Slack.post_message(token, channel, text, '<{}>'.format(username), icon_url)
 
 
 def send_to_slack_dm(text, username, bot):
@@ -77,12 +95,16 @@ def on_action(message, bot):
 
 
 def on_join(message, bot):
+    token = bot.c['slack:token']
     tokens = message.split()
     source = tokens[0].lstrip(':')
     nick, user, host = bot.parse_hostmask(source)
-    channel = tokens[2].lstrip(':')
-    m = '*{}* joined *{}* [{}@{}]'.format(nick, channel, user, host)
-    send_to_slack(m, bot.c['irc:host'], bot)
+    irc_channel = tokens[2].lstrip(':')
+    slack_channel = bot.c['channel_map'][irc_channel]
+    text = '_joined {}_ [{}@{}]'.format(irc_channel, user, host)
+    username = '<{}>'.format(nick)
+    icon_url = get_rw_avatar_url(nick, bot)
+    Slack.post_message(token, slack_channel, text, username, icon_url)
 
 
 def on_nick(message, bot):
@@ -119,13 +141,15 @@ def on_quit(message, bot):
     source = tokens[0].lstrip(':')
     nick, user, host = bot.parse_hostmask(source)
     text = message.split(' :', maxsplit=1)[1]
-    send_to_slack('*{}* quit [{}]'.format(nick, text), bot.c['irc:host'], bot)
+    m = '*{}* quit [{}]'.format(nick, text)
+    send_to_slack(m, bot.c['irc:host'], bot)
 
 
 def on_rpl_endofmotd(_, bot):
     if 'irc:nickservpass' in bot.c:
         bot.send_privmsg('nickserv', 'identify ' + bot.c['irc:nickservpass'])
-    bot.out('JOIN {}'.format(bot.c.get('irc:channel')))
+    for channel, _ in bot.c['channel_map'].items():
+        bot.out('JOIN ' + channel)
 
 
 def on_topic(message, bot):
