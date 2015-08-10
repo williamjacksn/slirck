@@ -146,7 +146,7 @@ def on_quit(message, bot):
     nick, _, _ = bot.parse_hostmask(source)
     icon_url = get_rw_avatar_url(nick, bot)
     text = message.split(' :', maxsplit=1)[1]
-    m = '_quit_ [{}]'.format(nick, text)
+    m = '_quit_ [{}]'.format(text)
     Slack.post_message(token, bot.c['irc:channel'], m, nick, icon_url)
 
 
