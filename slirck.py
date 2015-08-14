@@ -107,7 +107,7 @@ def on_nick(message, bot):
         icon_url = get_rw_avatar_url(new_nick, bot)
     irc_channels = [channel for channel, members in bot.members.items()
                     if new_nick in members]
-    text = '_is now known as *{}*_'.format(old_nick, new_nick)
+    text = '_is now known as *{}*_'.format(new_nick)
     for irc_channel in irc_channels:
         Slack.post_message(token, irc_channel, text, old_nick, icon_url)
 
