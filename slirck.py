@@ -113,7 +113,8 @@ def main():
         rv = aiohttp.web.Response()
         data = yield from request.content.read()
         data = urllib.parse.parse_qs(data.decode())
-        if 'USLACKBOT' in data['user_id']:
+        user_id = data.get('user_id')
+        if user_id is None or user_id == 'USLACKBOT':
             return rv
 
         irc.log('** Processing message from Slack to IRC')
