@@ -1,3 +1,4 @@
+import aiohttp.web
 import asyncio
 import humphrey
 import json
@@ -108,11 +109,38 @@ def main():
     irc.ee.on('PRIVMSG', func=on_privmsg)
     irc.ee.on('QUIT', func=on_quit)
 
+    def receive_from_slack(request):
+        rv = aiohttp.web.Response()
+        data = yield from request.content.read()
+        data = urllib.parse.parse_qs(data.decode())
+        if 'USLACKBOT' in data['user_id']:
+            return rv
+
+        irc.log('** Processing message from Slack to IRC')
+        speaker = data['user_name'][0]
+        text = data['text'][0]
+        slack_channel = data['channel_id']
+        irc_channel = None
+        for k, v in irc.c['channel_map'].items():
+            if v == slack_channel:
+                irc_channel = k
+
+        if irc_channel is not None:
+            irc.send_privmsg(irc_channel, '<{}> {}'.format(speaker, text))
+        return rv
+
+    app = aiohttp.web.Application()
+    app.router.add_route('POST', '/', receive_from_slack)
+    handler = app.make_handler()
+
     loop = asyncio.get_event_loop()
     host = irc.c.get('irc:host')
     port = irc.c.get('irc:port')
     coro = loop.create_connection(irc, host, port)
     loop.run_until_complete(coro)
+
+    f = loop.create_server(handler, '0.0.0.0', irc.c['web:port'])
+    loop.run_until_complete(f)
 
     try:
         loop.run_forever()
