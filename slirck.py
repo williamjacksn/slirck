@@ -114,13 +114,13 @@ def main():
         data = yield from request.content.read()
         data = urllib.parse.parse_qs(data.decode())
         user_id = data.get('user_id')
-        if user_id is None or user_id == 'USLACKBOT':
+        if user_id is None or user_id[0] == 'USLACKBOT':
             return rv
 
         irc.log('** Processing message from Slack to IRC')
         speaker = data['user_name'][0]
         text = data['text'][0]
-        slack_channel = data['channel_id']
+        slack_channel = data['channel_id'][0]
         irc_channel = None
         for k, v in irc.c['channel_map'].items():
             if v == slack_channel:
