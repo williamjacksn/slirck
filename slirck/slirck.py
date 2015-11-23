@@ -111,6 +111,8 @@ class KernelClient(asyncio.Protocol):
                 slack_channel = '#' + network + '-' + target.lstrip('#')
             else:
                 slack_channel = '@' + self.config['slack_username']
+            if self.verbose:
+                log('** Attempting to send message to Slack')
             self.slack.post_message(slack_channel, text, nick)
 
     def out(self, message):
