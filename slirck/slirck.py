@@ -261,7 +261,7 @@ def main():
         text = data['text'][0]
         slack_channel = data['channel_name'][0]
         net = slack_channel.split('-')[0]
-        irc_channel = '#' + slack_channel.split('-', 1)
+        irc_channel = '#' + slack_channel.split('-', 1)[1]
 
         if irc_channel is not None:
             message = 'PRIVMSG ' + irc_channel + ' :' + text
