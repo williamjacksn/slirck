@@ -89,6 +89,8 @@ class KernelClient(asyncio.Protocol):
 
     def connection_made(self, transport):
         self._t = transport
+        if self.verbose:
+            log('** Requesting stream from kernel')
         self.send_to_kernel('stream.start')
 
     def data_received(self, data):
@@ -117,10 +119,14 @@ class KernelClient(asyncio.Protocol):
         :type message: dict
         """
         line = json.dumps(message)
-        data = line.encode()
-        self._t.write(data + b'\n')
+        data = line.encode() + b'\n'
+        if self.verbose:
+            log('=> {!r}'.format(data))
+        self._t.write(data)
 
     def process_line(self, line):
+        if self.verbose:
+            log('<= {!r}'.format(line))
         message = json.loads(line.decode())
         if 'method' in message and message['method'] == 'handler':
             params = message['params']
