@@ -6,6 +6,7 @@ import json
 import pathlib
 import random
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
@@ -60,7 +61,11 @@ class Slack:
         if params is None:
             params = {}
         data = urllib.parse.urlencode(params).encode()
-        response = urllib.request.urlopen(url, data)
+        try:
+            response = urllib.request.urlopen(url, data)
+        except urllib.error.HTTPError as e:
+            log('** Error talking to Slack: {}'.format(e))
+            return None
         return json.loads(response.read().decode())
 
     def post_message(self, channel, text, username):
