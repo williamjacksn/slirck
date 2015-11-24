@@ -68,13 +68,25 @@ class Slack:
             return None
         return json.loads(response.read().decode())
 
-    def post_message(self, channel, text, username):
+    def channels_join(self, name):
+        method = 'channels.join'
+        params = {'token': self.config['slack_token'], 'name': name}
+        response = self.call(method, params)
+        if not response['ok']:
+            log('** Error sending {}: {}'.format(method, params))
+            log('** {}'.format(response['error']))
+        return response
+
+    def chat_post_message(self, channel, text, username):
         method = 'chat.postMessage'
         params = {'token': self.config['slack_token'], 'channel': channel,
                   'text': text, 'username': username}
         response = self.call(method, params)
         if not response['ok']:
+            log('** Error sending {}: {}'.format(method, params))
             log('** {}'.format(response['error']))
+            if response['error'] == 'channel_not_found':
+                self.channels_join(channel)
         return response
 
 
@@ -116,7 +128,7 @@ class KernelClient(asyncio.Protocol):
                 slack_channel = '@' + self.config['slack_username']
             if self.verbose:
                 log('** Attempting to send message to Slack')
-            self.slack.post_message(slack_channel, text, nick)
+            self.slack.chat_post_message(slack_channel, text, nick)
 
     def out(self, message):
         """
@@ -155,7 +167,7 @@ def on_action(message, bot):
         nick, _, _ = bot.parse_hostmask(source)
         text = ' '.join(tokens[4:])
         slack_channel = bot.c['channel_map'][target]
-        Slack.post_message(token, slack_channel, text, nick)
+        Slack.chat_post_message(token, slack_channel, text, nick)
 
 
 def on_join(message, bot):
@@ -166,7 +178,7 @@ def on_join(message, bot):
     irc_channel = tokens[2].lstrip(':')
     slack_channel = bot.c['channel_map'][irc_channel]
     text = '_joined {}_ [{}@{}]'.format(irc_channel, user, host)
-    Slack.post_message(token, slack_channel, text, nick)
+    Slack.chat_post_message(token, slack_channel, text, nick)
 
 
 def on_nick(message, bot):
@@ -180,7 +192,7 @@ def on_nick(message, bot):
     text = '_is now known as *{}*_'.format(new_nick)
     for irc_channel in irc_channels:
         slack_channel = bot.c['channel_map'][irc_channel]
-        Slack.post_message(token, slack_channel, text, old_nick)
+        Slack.chat_post_message(token, slack_channel, text, old_nick)
 
 
 def on_privmsg(message, bot):
@@ -192,7 +204,7 @@ def on_privmsg(message, bot):
     text = message.split(' :', maxsplit=1)[1]
     if bot.is_irc_channel(target):
         slack_channel = bot.c['channel_map'][target]
-        Slack.post_message(token, slack_channel, text, nick)
+        Slack.chat_post_message(token, slack_channel, text, nick)
 
 
 def on_quit(message, bot):
@@ -206,7 +218,7 @@ def on_quit(message, bot):
                     if nick in members]
     for irc_channel in irc_channels:
         slack_channel = bot.c['channel_map'][irc_channel]
-        Slack.post_message(token, slack_channel, text, nick)
+        Slack.chat_post_message(token, slack_channel, text, nick)
 
 
 def on_rpl_endofmotd(_, bot):
