@@ -72,7 +72,10 @@ class Slack:
         method = 'chat.postMessage'
         params = {'token': self.config['slack_token'], 'channel': channel,
                   'text': text, 'username': username}
-        return Slack.call(method, params)
+        response = self.call(method, params)
+        if not response['ok']:
+            log('** {}'.format(response['error']))
+        return response
 
 
 class KernelClient(asyncio.Protocol):
