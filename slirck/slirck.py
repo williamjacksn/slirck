@@ -122,9 +122,7 @@ class KernelClient(asyncio.Protocol):
             sender = tokens[0]
             nick = sender.lstrip(':').split('!')[0]
             user_host = sender.split('!')[1].lstrip('~').lower()
-            user_hash = hashlib.md5(user_host.encode()).hexdigest()
-            url_format = 'http://www.gravatar.com/avatar/{}?d=retro'
-            icon_url = url_format.format(user_hash)
+            icon_url = self.icon_url(user_host)
             target = tokens[2]
             text = message.split(' :', 1)[1]
             if target.startswith('#'):
@@ -134,6 +132,13 @@ class KernelClient(asyncio.Protocol):
             if self.verbose:
                 log('** Attempting to send message to Slack')
             self.slack.chat_post_message(slack_channel, text, nick, icon_url)
+
+    @staticmethod
+    def icon_url(content):
+        content_hash = hashlib.md5(content.encode()).hexdigest()
+        url_format = ('http://www.gravatar.com/avatar/{0}'
+                      '?d=https%3A%2F%2Fsigil.cupcake.io%2F{0}')
+        return url_format.format(content_hash)
 
     def out(self, message):
         """
