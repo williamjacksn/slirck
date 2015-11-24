@@ -163,64 +163,6 @@ class KernelClient(asyncio.Protocol):
         self.out(message)
 
 
-def on_action(message, bot):
-    token = bot.c['slack:token']
-    tokens = message.split()
-    target = tokens[2]
-    if bot.is_irc_channel(target):
-        source = tokens[0].lstrip(':')
-        nick, _, _ = bot.parse_hostmask(source)
-        text = ' '.join(tokens[4:])
-        slack_channel = bot.c['channel_map'][target]
-        Slack.chat_post_message(token, slack_channel, text, nick)
-
-
-def on_join(message, bot):
-    token = bot.c['slack:token']
-    tokens = message.split()
-    source = tokens[0].lstrip(':')
-    nick, user, host = bot.parse_hostmask(source)
-    irc_channel = tokens[2].lstrip(':')
-    slack_channel = bot.c['channel_map'][irc_channel]
-    text = '_joined {}_ [{}@{}]'.format(irc_channel, user, host)
-    Slack.chat_post_message(token, slack_channel, text, nick)
-
-
-def on_nick(message, bot):
-    token = bot.c['slack:token']
-    tokens = message.split()
-    source = tokens[0].lstrip(':')
-    old_nick, _, _ = bot.parse_hostmask(source)
-    new_nick = tokens[2].lstrip(':')
-    irc_channels = [channel for channel, members in bot.members.items()
-                    if new_nick in members]
-    text = '_is now known as *{}*_'.format(new_nick)
-    for irc_channel in irc_channels:
-        slack_channel = bot.c['channel_map'][irc_channel]
-        Slack.chat_post_message(token, slack_channel, text, old_nick)
-
-
-def on_quit(message, bot):
-    token = bot.c['slack:token']
-    tokens = message.split()
-    source = tokens[0].lstrip(':')
-    nick, _, _ = bot.parse_hostmask(source)
-    text = message.split(' :', maxsplit=1)[1]
-    text = '_quit_ [{}]'.format(text)
-    irc_channels = [channel for channel, members in bot.members.items()
-                    if nick in members]
-    for irc_channel in irc_channels:
-        slack_channel = bot.c['channel_map'][irc_channel]
-        Slack.chat_post_message(token, slack_channel, text, nick)
-
-
-def on_rpl_endofmotd(_, bot):
-    if 'irc:nickservpass' in bot.c:
-        bot.send_privmsg('nickserv', 'identify ' + bot.c['irc:nickservpass'])
-    for channel in bot.c['channel_map']:
-        bot.out('JOIN ' + channel)
-
-
 def generate_config(path: pathlib.Path):
     default_config = {
         'kernel_secret': str(uuid.uuid4()),
@@ -279,6 +221,16 @@ def main():
 
         if args.verbose:
             log('** Processing message from Slack to IRC')
+
+        if 'command' in data and '/pm' in data['command']:
+            if args.verbose:
+                log('** Received /pm command from Slack')
+            target, text = data['text'][0].split(maxsplit=1)
+            nick, net = target.split('@')
+            message = 'PRIVMSG ' + nick + ' :' + text
+            kc.send_to_kernel('network.send', {'name': net, 'message': message})
+            return rv
+
         text = data['text'][0]
         slack_channel = data['channel_name'][0]
         net = slack_channel.split('-')[0]
