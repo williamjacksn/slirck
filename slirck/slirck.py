@@ -244,6 +244,7 @@ def main():
             channel, net = data['text'][0].split('@')
             message = 'JOIN {}'.format(channel)
             kc.send_to_kernel('network.send', {'name': net, 'message': message})
+            return rv
 
         text = data['text'][0]
         slack_channel = data['channel_name'][0]
