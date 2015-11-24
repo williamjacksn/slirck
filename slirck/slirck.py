@@ -238,6 +238,13 @@ def main():
             kc.send_to_kernel('network.send', {'name': net, 'message': message})
             return rv
 
+        if 'command' in data and '/ircjoin' in data['command']:
+            if args.verbose:
+                log('** Received /ircjoin command from Slack')
+            channel, net = data['text'][0].split('@')
+            message = 'JOIN {}'.format(channel)
+            kc.send_to_kernel('network.send', {'name': net, 'message': message})
+
         text = data['text'][0]
         slack_channel = data['channel_name'][0]
         net = slack_channel.split('-')[0]
