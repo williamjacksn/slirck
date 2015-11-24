@@ -77,7 +77,8 @@ class Slack:
             log('** Error sending {}: {}'.format(method, params))
             log('** {}'.format(response['error']))
         text = 'I created a new channel {}'.format(name)
-        self.chat_post_message(self.config['slack_username'], text, 'IRC Bot')
+        slack_username = '@{}'.format(self.config['slack_username'])
+        self.chat_post_message(slack_username, text, 'IRC Bot')
         return response
 
     def chat_post_message(self, channel, text, username, icon_url=None):
