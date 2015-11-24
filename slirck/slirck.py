@@ -2,6 +2,7 @@ import aiohttp.web
 import argparse
 import asyncio
 import datetime
+import hashlib
 import json
 import pathlib
 import random
@@ -77,10 +78,10 @@ class Slack:
             log('** {}'.format(response['error']))
         return response
 
-    def chat_post_message(self, channel, text, username):
+    def chat_post_message(self, channel, text, username, icon_url=None):
         method = 'chat.postMessage'
         params = {'token': self.config['slack_token'], 'channel': channel,
-                  'text': text, 'username': username}
+                  'text': text, 'username': username, 'icon_url': icon_url}
         response = self.call(method, params)
         if not response['ok']:
             log('** Error sending {}: {}'.format(method, params))
@@ -120,6 +121,10 @@ class KernelClient(asyncio.Protocol):
         if len(tokens) > 1 and tokens[1] == 'PRIVMSG':
             sender = tokens[0]
             nick = sender.lstrip(':').split('!')[0]
+            user_host = sender.split('!')[1].lstrip('~').lower()
+            user_hash = hashlib.md5(user_host.encode()).hexdigest()
+            url_format = 'http://www.gravatar.com/avatar/{}?d=retro'
+            icon_url = url_format.format(user_hash)
             target = tokens[2]
             text = message.split(' :', 1)[1]
             if target.startswith('#'):
@@ -128,7 +133,7 @@ class KernelClient(asyncio.Protocol):
                 slack_channel = '@' + self.config['slack_username']
             if self.verbose:
                 log('** Attempting to send message to Slack')
-            self.slack.chat_post_message(slack_channel, text, nick)
+            self.slack.chat_post_message(slack_channel, text, nick, icon_url)
 
     def out(self, message):
         """
@@ -193,18 +198,6 @@ def on_nick(message, bot):
     for irc_channel in irc_channels:
         slack_channel = bot.c['channel_map'][irc_channel]
         Slack.chat_post_message(token, slack_channel, text, old_nick)
-
-
-def on_privmsg(message, bot):
-    token = bot.c['slack:token']
-    tokens = message.split()
-    target = tokens[2]
-    source = tokens[0].lstrip(':')
-    nick, _, _ = bot.parse_hostmask(source)
-    text = message.split(' :', maxsplit=1)[1]
-    if bot.is_irc_channel(target):
-        slack_channel = bot.c['channel_map'][target]
-        Slack.chat_post_message(token, slack_channel, text, nick)
 
 
 def on_quit(message, bot):
