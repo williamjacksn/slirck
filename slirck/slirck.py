@@ -197,6 +197,32 @@ def parse_args():
     return parser.parse_args()
 
 
+def slash_irc(text, kc):
+    if kc.verbose:
+        log('** Received from Slack: /irc {}'.format(text))
+    if text.lower().startswith('join '):
+        kc.send_to_kernel('network.send', slash_irc_join(text))
+    elif text.lower().startswith('part '):
+        kc.send_to_kernel('network.send', slash_irc_part(text))
+    elif text.lower().startswith('pm '):
+        kc.send_to_kernel('network.send', slash_irc_pm(text))
+
+
+def slash_irc_join(text):
+    _, net, channel = text.split(maxsplit=2)
+    return {'name': net, 'message': 'JOIN {}'.format(channel)}
+
+
+def slash_irc_part(text):
+    _, net, channel = text.split(maxsplit=2)
+    return {'name': net, 'message': 'PART {}'.format(channel)}
+
+
+def slash_irc_pm(text):
+    _, net, nick, text = text.split(maxsplit=3)
+    return {'name': net, 'message': 'PRIVMSG {} :{}'.format(nick, text)}
+
+
 def main():
     log('** Starting up')
     args = parse_args()
@@ -230,21 +256,8 @@ def main():
         if args.verbose:
             log('** Processing message from Slack to IRC')
 
-        if 'command' in data and '/pm' in data['command']:
-            if args.verbose:
-                log('** Received /pm command from Slack')
-            target, text = data['text'][0].split(maxsplit=1)
-            nick, net = target.split('@')
-            message = 'PRIVMSG ' + nick + ' :' + text
-            kc.send_to_kernel('network.send', {'name': net, 'message': message})
-            return rv
-
-        if 'command' in data and '/ircjoin' in data['command']:
-            if args.verbose:
-                log('** Received /ircjoin command from Slack')
-            channel, net = data['text'][0].split('@')
-            message = 'JOIN {}'.format(channel)
-            kc.send_to_kernel('network.send', {'name': net, 'message': message})
+        if 'command' in data in '/irc' in data['command']:
+            slash_irc(data['text'], kc)
             return rv
 
         text = data['text'][0]
