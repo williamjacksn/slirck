@@ -257,7 +257,7 @@ def main():
             log('** Processing message from Slack to IRC')
 
         if 'command' in data and '/irc' in data['command']:
-            slash_irc(data['text'], kc)
+            slash_irc(data['text'][0], kc)
             return rv
 
         text = data['text'][0]
