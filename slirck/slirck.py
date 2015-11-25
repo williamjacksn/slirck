@@ -121,7 +121,23 @@ class KernelClient(asyncio.Protocol):
 
     def handle_irc_message(self, network, message):
         tokens = message.split()
-        if len(tokens) > 1 and tokens[1] == 'PRIVMSG':
+
+        if len(tokens) > 3 and tokens[3] == ':\x01ACTION':
+            sender = tokens[0]
+            nick = sender.lstrip(':').split('!')[0]
+            user_host = sender.split('!')[1].lstrip('~').lower()
+            icon_url = self.icon_url(user_host)
+            target = tokens[2]
+            action = message.split(maxsplit=3)
+            text = action.lstrip(':').strip('\x01').lstrip('ACTION ')
+            text = '_{}_'.format(text)
+            if target.startswith('#'):
+                slack_channel = '#{}-{}'.format(network, target.lstrip('#'))
+            else:
+                slack_channel = '@{}'.format(self.config['slack_username'])
+            self.slack.chat_post_message(slack_channel, text, nick, icon_url)
+
+        elif len(tokens) > 1 and tokens[1] == 'PRIVMSG':
             sender = tokens[0]
             nick = sender.lstrip(':').split('!')[0]
             user_host = sender.split('!')[1].lstrip('~').lower()
