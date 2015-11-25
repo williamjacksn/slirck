@@ -256,7 +256,7 @@ def main():
         if args.verbose:
             log('** Processing message from Slack to IRC')
 
-        if 'command' in data in '/irc' in data['command']:
+        if 'command' in data and '/irc' in data['command']:
             slash_irc(data['text'], kc)
             return rv
 
