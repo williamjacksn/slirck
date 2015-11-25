@@ -143,7 +143,7 @@ class KernelClient(asyncio.Protocol):
             user_host = sender.split('!')[1].lstrip('~').lower()
             icon_url = self.icon_url(user_host)
             target = tokens[2].lstrip(':')
-            slack_channel = '#{}-{}'.format(network, target)
+            slack_channel = '#{}-{}'.format(network, target.lstrip('#'))
             text = '_joined {}_'.format(target)
             self.slack.chat_post_message(slack_channel, text, nick, icon_url)
 
