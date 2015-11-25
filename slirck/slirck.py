@@ -137,6 +137,16 @@ class KernelClient(asyncio.Protocol):
                 slack_channel = '@{}'.format(self.config['slack_username'])
             self.slack.chat_post_message(slack_channel, text, nick, icon_url)
 
+        elif len(tokens) > 1 and tokens[1] == 'JOIN':
+            sender = tokens[0]
+            nick = sender.lstrip(':').split('!')[0]
+            user_host = sender.split('!')[1].lstrip('~').lower()
+            icon_url = self.icon_url(user_host)
+            target = tokens[2].lstrip(':')
+            slack_channel = '#{}-{}'.format(network, target)
+            text = '_joined {}_'.format(target)
+            self.slack.chat_post_message(slack_channel, text, nick, icon_url)
+
         elif len(tokens) > 1 and tokens[1] == 'PRIVMSG':
             sender = tokens[0]
             nick = sender.lstrip(':').split('!')[0]
