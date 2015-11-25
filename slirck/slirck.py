@@ -128,7 +128,7 @@ class KernelClient(asyncio.Protocol):
             user_host = sender.split('!')[1].lstrip('~').lower()
             icon_url = self.icon_url(user_host)
             target = tokens[2]
-            action = message.split(maxsplit=3)
+            action = message.split(maxsplit=3)[3]
             text = action.lstrip(':').strip('\x01').lstrip('ACTION ')
             text = '_{}_'.format(text)
             if target.startswith('#'):
