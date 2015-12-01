@@ -228,6 +228,8 @@ def slash_irc(text, kc):
         log('** Received from Slack: /irc {}'.format(text))
     if text.lower().startswith('join '):
         kc.send_to_kernel('network.send', slash_irc_join(text))
+    elif text.lower().startswith('network get'):
+        kc.send_to_kernel('network.get')
     elif text.lower().startswith('part '):
         kc.send_to_kernel('network.send', slash_irc_part(text))
     elif text.lower().startswith('pm '):
